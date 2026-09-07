@@ -1,4 +1,4 @@
-#📚Studium-SistemadeEstudos
+# 📚Studium-SistemadeEstudos
 
 Sistema desenvolvido para cronograma de estudo pessoal.
 
