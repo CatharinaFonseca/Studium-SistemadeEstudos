@@ -1,11 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Studium</title>
-</head>
-<body>
-    <p>olá</p>
-</body>
-</html>
+<?php 
+    include("conexao.php");
+    echo "Hello, World!";
+?>
