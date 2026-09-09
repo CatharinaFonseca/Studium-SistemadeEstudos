@@ -1,32 +1,48 @@
 <?php 
+
+    if (!isset($_SESSION)) {
+        session_start();
+    } 
+
     include("conexao.php");
 
     $erro = [];
 
-    if(isset($_POST['email']) && strlen($_POST['email']) > 0){
-        if (!isset($_SESSION))
-            session_start();
-        
-        $_SESSION['email'] = $mysqli->escape_string($_POST['email']);
-        $_SESSION['senha'] = md5(md5($_POST['senha']));
+    if($_SERVER['REQUEST_METHOD'] === 'POST'){
+        $email_usuario = trim($_POST['email'] ?? '');
+        $senha_usuario = trim($_POST['senha'] ?? '');
 
-        $sql_code = "SELECT senha_usuario, id_usuario FROM usuario WHERE email_usuario = '$_SESSION[email]'";
-        $sql_query = $mysqli->query($sql_code) or die($mysqli->error);
-        $dado = $sql_query->fetch_assoc();
-        $total = $sql_query->num_rows;
+        if(empty($email_usuario) || empty($senha_usuario)){
+            $erro[] = "Preencha todos os campos!";
+        } else{
+            $sql = "SELECT senha_usuario, id_usuario FROM usuario WHERE email_usuario = ?";
 
-        if($total == 0){
-            $erro[] = "Este e-mail não pertence a nenhum usuário cadastrado!";
-        } else {
-            if($dado['senha_usuario'] == $_SESSION['senha']){
-                $_SESSION['usuario'] = $dado['id_usuario'];
+            $stmt = $mysqli->prepare($sql);
+
+            if($stmt){
+                $stmt->bind_param("s", $email_usuario);
+                $stmt->execute();
+                $result = $stmt->get_result();
+
+                if($result->num_rows === 0){
+                    $erro[] = "Email ou senha incorretos!";
+                } else {
+                    $usuario = $result->fetch_assoc();
+                    if(password_verify($senha_usuario, $usuario['senha_usuario'])){
+                        $_SESSION['id_usuario'] = $usuario['id_usuario'];
+                        $_SESSION['nome_usuario'] = $usuario['nome_usuario'];
+
+                        header("Location: index.php");
+                    } else {
+                        $erro[] = "Email ou senha incorretos!";
+                    }
+                }
+
+                $stmt->close();
             } else {
-                $erro[] = "Senha incorreta!";
+                $erro[] = "Erro interno ao processar login.";
             }
-        }    
-
-        if(count($erro) == 0 || !isset($erro)){
-            echo "<script>alert('Login realizado com sucesso!');location.href = 'index.php';</script>";
+         
         }
     }
 

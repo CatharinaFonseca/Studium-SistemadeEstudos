@@ -11,4 +11,5 @@
         echo "Falha ao conectar ao MySQL: (" . $mysqli->connect_errno . ") " . $mysqli->connect_error;
     }
 
+    $mysqli->set_charset("utf8mb4")
 ?>
