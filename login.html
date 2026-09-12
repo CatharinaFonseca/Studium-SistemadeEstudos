@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Studium</title>
+</head>
+<body>
+
+    <h2>Login - Studium</h2>
+
+    <form id="formLogin">
+        <label for="email">E-mail:</label>
+        <input type="email" id="email" required>
+        
+        <br><br>
+
+        <label for="senha">Senha:</label>
+        <input type="password" id="senha" required>
+
+        <br><br>
+
+        <button type="submit">Entrar</button>
+    </form>
+
+    <div id="mensagem" style="margin-top: 15px;"></div>
+
+    <script>
+        document.getElementById('formLogin').addEventListener('submit', async function(event) {
+            event.preventDefault(); // Impede o recarregamento da página
+
+            const email = document.getElementById('email').value;
+            const senha = document.getElementById('senha').value;
+            const divMensagem = document.getElementById('mensagem');
+
+            try {
+                // Envia os dados para a API PHP
+                const resposta = await fetch('loginAPI.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email: email, senha: senha })
+                });
+
+                const dados = await resposta.json();
+
+                if (resposta.ok) {
+                    // Salva o JWT no navegador do usuário
+                    localStorage.setItem('token_jwt', dados.token);
+                    
+                    divMensagem.style.color = 'green';
+                    divMensagem.innerText = 'Login realizado com sucesso! Guardando Token...';
+                    
+                    console.log('Seu Token JWT:', dados.token);
+
+                    setTimeout(() => {
+                        window.location.href = 'index.php';
+                    }, 1500);
+                } else {
+                    divMensagem.style.color = 'red';
+                    divMensagem.innerText = dados.erro;
+                }
+            } catch (erro) {
+                divMensagem.style.color = 'red';
+                divMensagem.innerText = 'Erro ao se conectar com o servidor.';
+            }
+        });
+    </script>
+</body>
+</html>

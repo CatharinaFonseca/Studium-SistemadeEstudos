@@ -23,8 +23,8 @@
 
         if(count($erro) == 0 && $total > 0){
 
-            $novaSenha = substr(md5(time()), 0, 6);
-            $novaSenhaCriptografada = md5(md5($novaSenha));
+            $novaSenha = substr(password_hash(time(), PASSWORD_DEFAULT), 0, 6);
+            $novaSenhaCriptografada = password_hash($novaSenha, PASSWORD_DEFAULT);
 
             if(1==1 /*mail($email, "Recuperação de senha", "Sua nova senha é:" . $novaSenha)*/){
                 $sql_code = "UPDATE usuario SET senha_usuario = '$novaSenhaCriptografada' WHERE email_usuario = '$email'";
@@ -41,11 +41,11 @@
 ?>
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Recuperar Senha</title>
 </head>
 <body>
     <?php
