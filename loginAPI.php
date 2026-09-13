@@ -16,8 +16,8 @@
         // Para ler dados enviados via JSON no PHP
         $input = json_decode(file_get_contents('php://input'), true);
 
-        $email_usuario = trim($_POST['email'] ?? $input['email'] ?? '');
-        $senha_usuario = trim($_POST['senha'] ?? $input['senha'] ?? '');
+        $email_usuario = trim($_POST['email_usuario'] ?? $input['email_usuario'] ?? '');
+        $senha_usuario = trim($_POST['senha_usuario'] ?? $input['senha_usuario'] ?? '');
 
         if(empty($email_usuario) || empty($senha_usuario)){
             echo json_encode( $erro[] = "Preencha todos os campos!");

@@ -33,9 +33,9 @@
         document.getElementById('formCadastro').addEventListener('submit', async function(event) {
             event.preventDefault();
 
-            const nome = document.getElementById('nome').value;
-            const email = document.getElementById('email').value;
-            const senha = document.getElementById('senha').value;
+            const nome_usuario = document.getElementById('nome_usuario').value;
+            const email_usuario = document.getElementById('email_usuario').value;
+            const senha_usuario = document.getElementById('senha_usuario').value;
             const divMensagem = document.getElementById('mensagem');
 
             try {
@@ -46,9 +46,9 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({ 
-                        nome_usuario: nome, 
-                        email_usuario: email, 
-                        senha_usuario: senha 
+                        nome_usuario: nome_usuario, 
+                        email_usuario: email_usuario, 
+                        senha_usuario: senha_usuario 
                     })
                 });
 

@@ -29,8 +29,8 @@
         document.getElementById('formLogin').addEventListener('submit', async function(event) {
             event.preventDefault(); // Impede o recarregamento da página
 
-            const email = document.getElementById('email').value;
-            const senha = document.getElementById('senha').value;
+            const email_usuario = document.getElementById('email_usuario').value;
+            const senha_usuario = document.getElementById('senha_usuario').value;
             const divMensagem = document.getElementById('mensagem');
 
             try {
@@ -40,7 +40,7 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ email: email, senha: senha })
+                    body: JSON.stringify({ email_usuario: email_usuario, senha_usuario: senha_usuario })
                 });
 
                 const dados = await resposta.json();

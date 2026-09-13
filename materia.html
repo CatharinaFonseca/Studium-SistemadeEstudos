@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste - Cadastrar Matéria</title>
+</head>
+<body>
+
+    <h2>Cadastrar Nova Matéria</h2>
+
+    <form id="formMateria">
+        <label for="nome_materia">Nome da Matéria:</label><br>
+        <input type="text" id="nome_materia" placeholder="Ex: Matemática, História..." required>
+        <br><br>
+
+        <label for="cor_materia">Cor de Identificação:</label><br>
+        <input type="color" id="cor_materia" value="#706f6f">
+        <br><br>
+
+        <button type="submit">Salvar Matéria</button>
+    </form>
+
+    <div id="mensagem" style="margin-top: 15px; font-weight: bold;"></div>
+
+    <script>
+        document.getElementById('formMateria').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const token = localStorage.getItem('token_jwt');
+            const divMensagem = document.getElementById('mensagem');
+
+            if (!token) {
+                divMensagem.style.color = 'red';
+                divMensagem.innerText = 'Você não está logado! Faça login primeiro.';
+                return;
+            }
+
+            const dados = {
+                nome_materia: document.getElementById('nome_materia').value,
+                cor_materia: document.getElementById('cor_materia').value
+            };
+
+            try {
+                const resposta = await fetch('materiaAPI.php', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(dados)
+                });
+
+                const resultado = await resposta.json();
+
+                if (resposta.ok) {
+                    divMensagem.style.color = 'green';
+                    divMensagem.innerText = resultado.mensagem;
+                    document.getElementById('formMateria').reset();
+                } else {
+                    divMensagem.style.color = 'red';
+                    divMensagem.innerText = resultado.erro;
+                }
+            } catch (erro) {
+                divMensagem.style.color = 'red';
+                divMensagem.innerText = 'Erro ao se conectar com o servidor.';
+            }
+        });
+    </script>
+</body>
+</html>

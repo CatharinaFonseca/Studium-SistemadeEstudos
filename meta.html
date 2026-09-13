@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Cadastrar Meta</title>
+</head>
+<body>
+    <h2>Nova Meta de Estudo</h2>
+
+    <form id="formMeta">
+       <label for="id_materia">Matéria:</label>
+        <select id="id_materia" required>
+            <option value="">Carregando matérias...</option>
+        </select>
+        <br><br>
+
+        <label>Título da Meta:</label>
+        <input type="text" id="titulo" placeholder="Ex: Estudar 5 capítulos" required><br><br>
+
+        <label>Minutos Alvo:</label>
+        <input type="number" id="minutos_alvo" placeholder="Ex: 120min" required><br><br>
+
+        <label>Data Limite:</label>
+        <input type="date" id="data_limite"><br><br>
+
+    
+        <label>Status:</label>
+        <select id="status">
+            <option value="Pendente" selected>Pendente</option>
+            <option value="Em Andamento">Em Andamento</option>
+            <option value="Concluida">Concluida</option>
+        </select><br><br>
+
+        <button type="submit">Salvar Meta</button>
+    </form>
+
+    <div id="mensagem" style="margin-top: 15px;"></div>
+
+    <script>
+        document.getElementById('formMeta').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const token = localStorage.getItem('token_jwt');
+            if (!token) {
+                alert('Você não está autenticado!');
+                window.location.href = 'login.html';
+                return;
+            }
+
+            const dadosForm = {
+                id_materia: document.getElementById('id_materia').value,
+                titulo_meta: document.getElementById('titulo_meta').value,
+                minutos_alvo: document.getElementById('minutos_alvo').value,
+                data_limite: document.getElementById('data_limite').value || null,
+                status: document.getElementById('status').value
+            };
+
+            const divMensagem = document.getElementById('mensagem');
+
+            try {
+                const resposta = await fetch('metaAPI.php', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(dadosForm)
+                });
+
+                const resultado = await resposta.json();
+
+                if (resposta.ok) {
+                    divMensagem.style.color = 'green';
+                    divMensagem.innerText = resultado.mensagem;
+                    document.getElementById('formMeta').reset();
+                } else {
+                    divMensagem.style.color = 'red';
+                    divMensagem.innerText = resultado.erro;
+                }
+            } catch (erro) {
+                divMensagem.style.color = 'red';
+                divMensagem.innerText = 'Erro de conexão com o servidor.';
+            }
+        });
+    </script>
+</body>
+</html>
