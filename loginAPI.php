@@ -39,7 +39,7 @@
                     if(password_verify($senha_usuario, $usuario['senha_usuario'])){
 
                     $tempo_atual = time();
-                    $tempo_expiracao = $tempo_atual + (60 * 60 * 8);
+                    $tempo_expiracao = $tempo_atual + (60 * 60 * 24);
 
                     $payload = [
                         'iat' => $tempo_atual,                  
@@ -58,7 +58,6 @@
                         "expira_em" => date('Y-m-d H:i:s', $tempo_expiracao)
                     ]);
 
-                        //header("Location: index.php");
                     } else {
                         echo json_encode($erro[] = "Email ou senha incorretos!");
                     }

@@ -21,11 +21,11 @@
             exit;
     }
 
-        $sql = "INSERT INTO materias (nome_materia, cor_materia) VALUES (?, ?)";
+        $sql = "INSERT INTO materia (id_usuario, nome_materia, cor_materia) VALUES (?, ?, ?)";
         $stmt = $mysqli->prepare($sql);
 
         if($stmt){
-            $stmt->bind_param("iss", $nome_materia, $cor_materia);
+            $stmt->bind_param("iss", $id_usuario, $nome_materia, $cor_materia);
 
         if ($stmt->execute()) {
             http_response_code(201);

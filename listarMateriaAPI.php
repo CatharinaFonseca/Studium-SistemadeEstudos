@@ -5,7 +5,7 @@ include("conexao.php");
 header('Content-Type: application/json; charset=utf-8');
 
 
-$sql = "SELECT id_materia, nome_materia FROM materias WHERE id_usuario = ?";
+$sql = "SELECT id_materia, nome_materia FROM materia WHERE id_usuario = ?";
 $stmt = $mysqli->prepare($sql);
 
 if ($stmt) {

@@ -8,24 +8,23 @@
     <h2>Nova Meta de Estudo</h2>
 
     <form id="formMeta">
-       <label for="id_materia">Matéria:</label>
+        <label for="id_materia">Matéria:</label>
         <select id="id_materia" required>
             <option value="">Carregando matérias...</option>
         </select>
         <br><br>
 
-        <label>Título da Meta:</label>
-        <input type="text" id="titulo" placeholder="Ex: Estudar 5 capítulos" required><br><br>
+        <label for="titulo_meta">Título da Meta:</label>
+        <input type="text" id="titulo_meta" placeholder="Ex: Estudar 5 capítulos" required><br><br>
 
-        <label>Minutos Alvo:</label>
+        <label for="minutos_alvo">Minutos Alvo:</label>
         <input type="number" id="minutos_alvo" placeholder="Ex: 120min" required><br><br>
 
-        <label>Data Limite:</label>
+        <label for="data_limite">Data Limite:</label>
         <input type="date" id="data_limite"><br><br>
 
-    
-        <label>Status:</label>
-        <select id="status">
+        <label for="status_meta">Status:</label>
+        <select id="status_meta">
             <option value="Pendente" selected>Pendente</option>
             <option value="Em Andamento">Em Andamento</option>
             <option value="Concluida">Concluida</option>
@@ -37,25 +36,108 @@
     <div id="mensagem" style="margin-top: 15px;"></div>
 
     <script>
+        // Trata a recuperação do token
+        let token = localStorage.getItem('token_jwt');
+        if (!token || token === "undefined" || token === "null") {
+            alert('Sessão expirada. Faça login novamente.');
+            window.location.href = 'login.html';
+        } else {
+            token = token.replace(/^"|"$/g, '');
+        }
+
+        /*document.addEventListener('DOMContentLoaded', async () => {
+            const selectMateria = document.getElementById('id_materia');
+
+            try {
+                const resposta = await fetch('listarMateriaAPI.php', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const materias = await resposta.json();
+
+                if (resposta.ok) {
+                    selectMateria.innerHTML = '<option value="">Selecione uma matéria</option>';
+
+                    if (materias.length === 0) {
+                        selectMateria.innerHTML = '<option value="">Nenhuma matéria cadastrada</option>';
+                        return;
+                    }
+
+                    materias.forEach(materia => {
+                        const option = document.createElement('option');
+                        option.value = materia.id_materia;
+                        option.textContent = materia.nome_materia;
+                        selectMateria.appendChild(option);
+                    });
+                } else {
+                    selectMateria.innerHTML = '<option value="">Erro ao carregar matérias</option>';
+                }
+            } catch (erro) {
+                console.error("Erro ao carregar matérias:", erro);
+                selectMateria.innerHTML = '<option value="">Erro de conexão</option>';
+            }
+        });*/
+        document.addEventListener('DOMContentLoaded', async () => {
+    const selectMateria = document.getElementById('id_materia');
+
+    try {
+        const resposta = await fetch('listarMateriaAPI.php', {
+            method: 'GET',
+            headers: {
+                'Authorization': 'Bearer ' + token,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const textoResposta = await resposta.text();
+
+        try {
+            const materias = JSON.parse(textoResposta);
+
+            if (resposta.ok) {
+                selectMateria.innerHTML = '<option value="">Selecione uma matéria</option>';
+
+                if (materias.length === 0) {
+                    selectMateria.innerHTML = '<option value="">Nenhuma matéria cadastrada</option>';
+                    return;
+                }
+
+                materias.forEach(materia => {
+                    const option = document.createElement('option');
+                    option.value = materia.id_materia;
+                    option.textContent = materia.nome_materia;
+                    selectMateria.appendChild(option);
+                });
+            } else {
+                selectMateria.innerHTML = '<option value="">Erro ao carregar matérias</option>';
+            }
+        } catch (e) {
+            console.error("Erro do PHP em listarMateriaAPI.php:", textoResposta);
+            selectMateria.innerHTML = '<option value="">Erro no PHP (veja F12)</option>';
+        }
+
+    } catch (erro) {
+        console.error("Erro na requisição das matérias:", erro);
+        selectMateria.innerHTML = '<option value="">Erro de conexão</option>';
+    }
+});
+
         document.getElementById('formMeta').addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            const token = localStorage.getItem('token_jwt');
-            if (!token) {
-                alert('Você não está autenticado!');
-                window.location.href = 'login.html';
-                return;
-            }
+            const divMensagem = document.getElementById('mensagem');
 
             const dadosForm = {
                 id_materia: document.getElementById('id_materia').value,
-                titulo_meta: document.getElementById('titulo_meta').value,
+                titulo_meta: document.getElementById('titulo_meta').value, 
                 minutos_alvo: document.getElementById('minutos_alvo').value,
                 data_limite: document.getElementById('data_limite').value || null,
-                status: document.getElementById('status').value
+                status_meta: document.getElementById('status_meta').value
             };
-
-            const divMensagem = document.getElementById('mensagem');
 
             try {
                 const resposta = await fetch('metaAPI.php', {
@@ -71,15 +153,16 @@
 
                 if (resposta.ok) {
                     divMensagem.style.color = 'green';
-                    divMensagem.innerText = resultado.mensagem;
+                    divMensagem.innerText = resultado.mensagem || 'Meta cadastrada com sucesso!';
                     document.getElementById('formMeta').reset();
                 } else {
                     divMensagem.style.color = 'red';
-                    divMensagem.innerText = resultado.erro;
+                    divMensagem.innerText = 'Erro: ' + (resultado.erro || 'Falha ao salvar meta.');
                 }
             } catch (erro) {
+                console.error("Erro na requisição:", erro);
                 divMensagem.style.color = 'red';
-                divMensagem.innerText = 'Erro de conexão com o servidor.';
+                divMensagem.innerText = 'Erro de conexão com o servidor ao salvar meta.';
             }
         });
     </script>

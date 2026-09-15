@@ -10,13 +10,13 @@
     <h2>Login - Studium</h2>
 
     <form id="formLogin">
-        <label for="email">E-mail:</label>
-        <input type="email" id="email" required>
+        <label for="email_usuario">E-mail:</label>
+        <input type="email" id="email_usuario" required>
         
         <br><br>
 
-        <label for="senha">Senha:</label>
-        <input type="password" id="senha" required>
+        <label for="senha_usuario">Senha:</label>
+        <input type="password" id="senha_usuario" required>
 
         <br><br>
 
@@ -44,22 +44,23 @@
                 });
 
                 const dados = await resposta.json();
+                console.log("Objeto retornado pelo PHP:", dados);
 
                 if (resposta.ok) {
-                    // Salva o JWT no navegador do usuário
-                    localStorage.setItem('token_jwt', dados.token);
-                    
-                    divMensagem.style.color = 'green';
-                    divMensagem.innerText = 'Login realizado com sucesso! Guardando Token...';
-                    
-                    console.log('Seu Token JWT:', dados.token);
+                    const tokenGerado = dados.token || dados.jwt; 
 
-                    setTimeout(() => {
-                        window.location.href = 'index.php';
-                    }, 1500);
-                } else {
+                    if (tokenGerado) {
+                        localStorage.setItem('token_jwt', tokenGerado);
+                        console.log("Token salvo com sucesso:", tokenGerado);
+                        window.location.href = 'materia.html';
+                    } else {
+                        console.error("A API não retornou uma chave 'token' ou 'jwt':", dados);
+                        alert("Erro: A resposta do servidor não continha um Token válido.");
+                    }
+                }
+                else {
                     divMensagem.style.color = 'red';
-                    divMensagem.innerText = dados.erro;
+                    divMensagem.innerText = dados.mensagem || "Erro ao fazer login.";
                 }
             } catch (erro) {
                 divMensagem.style.color = 'red';

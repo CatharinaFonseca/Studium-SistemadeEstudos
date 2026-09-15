@@ -34,22 +34,23 @@
     if($_SERVER['REQUEST_METHOD'] === 'POST') {
         $input = json_decode(file_get_contents('php://input'), true);
 
-        $titulo_meta = $input['titulo_meta'] ?? '';
+        $id_materia   = $input['id_materia'] ?? null;
+        $titulo_meta  = trim($input['titulo_meta'] ?? '');
         $minuto_alvo = $input['minuto_alvo'] ?? '';
         $data_limite  = $input['data_limite'] ?? '';
         // Se não passar status, assume 'Pendente'
-        $status       = $input['status'] ?? 'Pendente';
+        $status_meta= !empty($input['status_meta']) ? $input['status_meta'] : 'Pendente';
 
          if (empty($titulo_meta) || empty($minuto_alvo) || empty($data_limite)) {
             echo json_encode(["erro" => "Por favor, preencha todos os campos."]);
             exit;
         } 
 
-        $sql = "INSERT INTO metas (titulo_meta, minuto_alvo, data_limite, status) VALUES (?, ?, ?, ?, ?, ?)";
+        $sql = "INSERT INTO meta (id_materia, id_usuario, titulo_meta, minuto_alvo, data_limite, status_meta) VALUES (?, ?, ?, ?, ?, ?)";
          $stmt = $mysqli->prepare($sql);
 
         if($stmt){
-            $stmt->bind_param("iissss", $titulo_meta, $minuto_alvo, $data_limite, $status);
+           $stmt->bind_param("iissss", $id_usuario, $id_materia, $titulo_meta, $minutos_alvo, $data_limite, $status_meta);
 
         if ($stmt->execute()) {
             http_response_code(201);

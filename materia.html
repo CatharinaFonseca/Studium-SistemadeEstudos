@@ -19,6 +19,9 @@
         <br><br>
 
         <button type="submit">Salvar Matéria</button>
+        <br><br>
+        
+        <button type="button" onclick="window.location.href='meta.html'">Adicionar Meta</button>
     </form>
 
     <div id="mensagem" style="margin-top: 15px; font-weight: bold;"></div>
@@ -27,14 +30,18 @@
         document.getElementById('formMateria').addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            const token = localStorage.getItem('token_jwt');
             const divMensagem = document.getElementById('mensagem');
+            let token = localStorage.getItem('token_jwt');
 
-            if (!token) {
+            console.log("Token lido do localStorage:", token);
+
+            if (!token || token === "undefined" || token === "null") {
                 divMensagem.style.color = 'red';
-                divMensagem.innerText = 'Você não está logado! Faça login primeiro.';
+                divMensagem.innerText = "Sessão ausente ou inválida. Faça login novamente.";
                 return;
             }
+
+            token = token.replace(/^"|"$/g, ''); 
 
             const dados = {
                 nome_materia: document.getElementById('nome_materia').value,
@@ -51,19 +58,27 @@
                     body: JSON.stringify(dados)
                 });
 
-                const resultado = await resposta.json();
+                const textoResposta = await resposta.text();
 
-                if (resposta.ok) {
-                    divMensagem.style.color = 'green';
-                    divMensagem.innerText = resultado.mensagem;
-                    document.getElementById('formMateria').reset();
-                } else {
-                    divMensagem.style.color = 'red';
-                    divMensagem.innerText = resultado.erro;
+                try {
+                    // Tenta converter o texto para JSON
+                    const resultado = JSON.parse(textoResposta);
+
+                    if (resposta.ok) {
+                        alert(resultado.mensagem);
+                        document.getElementById('formMateria').reset();
+                    } else {
+                        alert("Erro da API: " + resultado.erro);
+                    }
+                } catch (e) {
+                    //  Se não for JSON, exibe o erro do PHP no Console e na tela!
+                    console.error("Resposta do servidor não é JSON:", textoResposta);
+                    alert("Erro no Servidor PHP! Veja o Console (F12) para os detalhes.");
                 }
             } catch (erro) {
+                console.error("Erro na requisição:", erro);
                 divMensagem.style.color = 'red';
-                divMensagem.innerText = 'Erro ao se conectar com o servidor.';
+                divMensagem.innerText = "Erro ao se conectar com o servidor.";
             }
         });
     </script>
