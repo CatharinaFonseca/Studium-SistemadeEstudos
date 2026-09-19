@@ -2,146 +2,204 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Cadastrar Meta</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciar Metas de Estudo</title>
 </head>
 <body>
-    <h2>Nova Meta de Estudo</h2>
+    <h2 id="tituloForm">Nova Meta de Estudo</h2>
 
+    <!-- Formulário para Cadastrar e Editar Meta -->
     <form id="formMeta">
-        <label for="id_materia">Matéria:</label>
+        <input type="hidden" id="id_meta">
+
+        <label for="id_materia">Matéria:</label><br>
         <select id="id_materia" required>
             <option value="">Carregando matérias...</option>
         </select>
         <br><br>
 
-        <label for="titulo_meta">Título da Meta:</label>
+        <label for="titulo_meta">Título da Meta:</label><br>
         <input type="text" id="titulo_meta" placeholder="Ex: Estudar 5 capítulos" required><br><br>
 
-        <label for="minutos_alvo">Minutos Alvo:</label>
-        <input type="number" id="minutos_alvo" placeholder="Ex: 120min" required><br><br>
+        <label for="minuto_alvo">Minutos Alvo:</label><br>
+        <input type="number" id="minuto_alvo" placeholder="Ex: 120" required><br><br>
 
-        <label for="data_limite">Data Limite:</label>
+        <label for="data_limite">Data Limite:</label><br>
         <input type="date" id="data_limite"><br><br>
 
-        <label for="status_meta">Status:</label>
+        <label for="status_meta">Status:</label><br>
         <select id="status_meta">
             <option value="Pendente" selected>Pendente</option>
             <option value="Em Andamento">Em Andamento</option>
-            <option value="Concluida">Concluida</option>
+            <option value="Concluida">Concluída</option>
         </select><br><br>
 
-        <button type="submit">Salvar Meta</button>
+        <button type="submit" id="btnSalvar">Salvar Meta</button>
+        <button type="button" id="btnCancelar" style="display: none;" onclick="cancelarEdicao()">Cancelar Edição</button>
+        <br><br>
+
+       <button type="button" onclick="window.location.href='home.html'">Home</button>
     </form>
 
-    <div id="mensagem" style="margin-top: 15px;"></div>
+    <div id="mensagem" style="margin-top: 15px; font-weight: bold;"></div>
+
+    <hr style="margin: 20px 0;">
+
+    <h3>Minhas Metas</h3>
+    <table border="1" cellpadding="8" style="border-collapse: collapse; width: 100%; max-width: 800px;">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Matéria</th>
+                <th>Título</th>
+                <th>Min. Alvo</th>
+                <th>Data Limite</th>
+                <th>Status</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody id="tabelaMetas">
+            <tr>
+                <td colspan="7">Carregando metas...</td>
+            </tr>
+        </tbody>
+    </table>
 
     <script>
-        // Trata a recuperação do token
-        let token = localStorage.getItem('token_jwt');
-        if (!token || token === "undefined" || token === "null") {
-            alert('Sessão expirada. Faça login novamente.');
-            window.location.href = 'login.html';
-        } else {
-            token = token.replace(/^"|"$/g, '');
+        function obterToken() {
+            let token = localStorage.getItem('token_jwt');
+            if (!token || token === "undefined" || token === "null") {
+                alert('Sessão expirada. Faça login novamente.');
+                window.location.href = 'login.html';
+                return null;
+            }
+            return token.replace(/^"|"$/g, '');
         }
 
-        /*document.addEventListener('DOMContentLoaded', async () => {
+        // Mapeamento local das matérias (id_materia => nome_materia)
+        const mapaMaterias = {};
+
+        // Carregar matérias 
+        async function carregarMateriasSelect() {
+            const token = obterToken();
+            if (!token) return;
+
             const selectMateria = document.getElementById('id_materia');
 
             try {
-                const resposta = await fetch('listarMateriaAPI.php', {
+                const resposta = await fetch('materiaAPI.php', {
                     method: 'GET',
-                    headers: {
-                        'Authorization': 'Bearer ' + token,
-                        'Content-Type': 'application/json'
-                    }
+                    headers: { 'Authorization': 'Bearer ' + token }
                 });
 
-                const materias = await resposta.json();
+                const texto = await resposta.text();
+                const materias = JSON.parse(texto);
 
-                if (resposta.ok) {
+                if (resposta.ok && Array.isArray(materias)) {
                     selectMateria.innerHTML = '<option value="">Selecione uma matéria</option>';
-
-                    if (materias.length === 0) {
-                        selectMateria.innerHTML = '<option value="">Nenhuma matéria cadastrada</option>';
-                        return;
-                    }
-
-                    materias.forEach(materia => {
-                        const option = document.createElement('option');
-                        option.value = materia.id_materia;
-                        option.textContent = materia.nome_materia;
-                        selectMateria.appendChild(option);
+                    materias.forEach(m => {
+                        mapaMaterias[m.id_materia] = m.nome_materia;
+                        const opt = document.createElement('option');
+                        opt.value = m.id_materia;
+                        opt.textContent = m.nome_materia;
+                        selectMateria.appendChild(opt);
                     });
                 } else {
                     selectMateria.innerHTML = '<option value="">Erro ao carregar matérias</option>';
                 }
-            } catch (erro) {
-                console.error("Erro ao carregar matérias:", erro);
+            } catch (e) {
+                console.error("Erro ao listar matérias:", e);
                 selectMateria.innerHTML = '<option value="">Erro de conexão</option>';
             }
-        });*/
-        document.addEventListener('DOMContentLoaded', async () => {
-    const selectMateria = document.getElementById('id_materia');
-
-    try {
-        const resposta = await fetch('listarMateriaAPI.php', {
-            method: 'GET',
-            headers: {
-                'Authorization': 'Bearer ' + token,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        const textoResposta = await resposta.text();
-
-        try {
-            const materias = JSON.parse(textoResposta);
-
-            if (resposta.ok) {
-                selectMateria.innerHTML = '<option value="">Selecione uma matéria</option>';
-
-                if (materias.length === 0) {
-                    selectMateria.innerHTML = '<option value="">Nenhuma matéria cadastrada</option>';
-                    return;
-                }
-
-                materias.forEach(materia => {
-                    const option = document.createElement('option');
-                    option.value = materia.id_materia;
-                    option.textContent = materia.nome_materia;
-                    selectMateria.appendChild(option);
-                });
-            } else {
-                selectMateria.innerHTML = '<option value="">Erro ao carregar matérias</option>';
-            }
-        } catch (e) {
-            console.error("Erro do PHP em listarMateriaAPI.php:", textoResposta);
-            selectMateria.innerHTML = '<option value="">Erro no PHP (veja F12)</option>';
         }
 
-    } catch (erro) {
-        console.error("Erro na requisição das matérias:", erro);
-        selectMateria.innerHTML = '<option value="">Erro de conexão</option>';
-    }
-});
+        // Carregar metas existentes
+        async function carregarMetas() {
+            const token = obterToken();
+            if (!token) return;
 
+            const tabela = document.getElementById('tabelaMetas');
+
+            try {
+                const resposta = await fetch('metaAPI.php', {
+                    method: 'GET',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                const texto = await resposta.text();
+
+                try {
+                    const metas = JSON.parse(texto);
+
+                    if (!resposta.ok) {
+                        tabela.innerHTML = `<tr><td colspan="7" style="color:red;">${metas.erro || 'Erro ao carregar metas.'}</td></tr>`;
+                        return;
+                    }
+
+                    if (metas.length === 0) {
+                        tabela.innerHTML = '<tr><td colspan="7">Nenhuma meta cadastrada.</td></tr>';
+                        return;
+                    }
+
+                    tabela.innerHTML = '';
+                    metas.forEach(meta => {
+                        const nomeMateria = mapaMaterias[meta.id_materia] || meta.nome_materia || meta.id_materia;
+                        const dataFmt = meta.data_limite ? meta.data_limite.split('-').reverse().join('/') : '-';
+
+                        tabela.innerHTML += `
+                            <tr>
+                                <td>${meta.id_meta}</td>
+                                <td>${nomeMateria}</td>
+                                <td>${meta.titulo_meta}</td>
+                                <td>${meta.minuto_alvo} min</td>
+                                <td>${dataFmt}</td>
+                                <td>${meta.status_meta}</td>
+                                <td>
+                                    <button type="button" onclick="prepararEdicao(${meta.id_meta}, ${meta.id_materia}, '${escapeHtml(meta.titulo_meta)}', ${meta.minuto_alvo}, '${meta.data_limite || ''}', '${meta.status_meta}')">Alterar</button>
+                                    <button type="button" onclick="excluirMeta(${meta.id_meta})">Apagar</button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                } catch (e) {
+                    console.error("Resposta não é JSON:", texto);
+                    tabela.innerHTML = '<tr><td colspan="7" style="color:red;">Erro ao processar resposta do servidor.</td></tr>';
+                }
+            } catch (e) {
+                console.error("Erro ao carregar metas:", e);
+                tabela.innerHTML = '<tr><td colspan="7" style="color:red;">Erro ao conectar com o servidor.</td></tr>';
+            }
+        }
+
+        // Escape de strings para evitar quebra em aspas simples nos atributos onclick
+        function escapeHtml(str) {
+            return str ? str.replace(/'/g, "\\'").replace(/"/g, "&quot;") : '';
+        }
+
+        // Cadastrar ou atualizar meta
         document.getElementById('formMeta').addEventListener('submit', async (e) => {
             e.preventDefault();
 
+            const token = obterToken();
+            if (!token) return;
+
             const divMensagem = document.getElementById('mensagem');
+            const idMeta = document.getElementById('id_meta').value;
 
             const dadosForm = {
+                id_meta: idMeta || null,
                 id_materia: document.getElementById('id_materia').value,
-                titulo_meta: document.getElementById('titulo_meta').value, 
-                minutos_alvo: document.getElementById('minutos_alvo').value,
+                titulo_meta: document.getElementById('titulo_meta').value,
+                minuto_alvo: document.getElementById('minuto_alvo').value,
                 data_limite: document.getElementById('data_limite').value || null,
                 status_meta: document.getElementById('status_meta').value
             };
 
+            const metodo = idMeta ? 'PUT' : 'POST';
+
             try {
                 const resposta = await fetch('metaAPI.php', {
-                    method: 'POST',
+                    method: metodo,
                     headers: {
                         'Authorization': 'Bearer ' + token,
                         'Content-Type': 'application/json'
@@ -149,22 +207,97 @@
                     body: JSON.stringify(dadosForm)
                 });
 
-                const resultado = await resposta.json();
+                const texto = await resposta.text();
 
-                if (resposta.ok) {
-                    divMensagem.style.color = 'green';
-                    divMensagem.innerText = resultado.mensagem || 'Meta cadastrada com sucesso!';
-                    document.getElementById('formMeta').reset();
-                } else {
+                try {
+                    const resultado = JSON.parse(texto);
+
+                    if (resposta.ok) {
+                        divMensagem.style.color = 'green';
+                        divMensagem.innerText = resultado.mensagem || 'Operação realizada com sucesso!';
+                        cancelarEdicao();
+                        carregarMetas();
+                    } else {
+                        divMensagem.style.color = 'red';
+                        divMensagem.innerText = 'Erro: ' + (resultado.erro || 'Falha ao processar meta.');
+                    }
+                } catch (e) {
+                    console.error("Resposta não é JSON:", texto);
                     divMensagem.style.color = 'red';
-                    divMensagem.innerText = 'Erro: ' + (resultado.erro || 'Falha ao salvar meta.');
+                    divMensagem.innerText = 'Erro no servidor PHP. Veja o console (F12).';
                 }
             } catch (erro) {
                 console.error("Erro na requisição:", erro);
                 divMensagem.style.color = 'red';
-                divMensagem.innerText = 'Erro de conexão com o servidor ao salvar meta.';
+                divMensagem.innerText = 'Erro de conexão com o servidor.';
             }
         });
+
+        function prepararEdicao(id, idMateria, titulo, minuto, data, status) {
+            document.getElementById('id_meta').value = id;
+            document.getElementById('id_materia').value = idMateria;
+            document.getElementById('titulo_meta').value = titulo;
+            document.getElementById('minuto_alvo').value = minuto;
+            document.getElementById('data_limite').value = data;
+            document.getElementById('status_meta').value = status;
+
+            document.getElementById('tituloForm').innerText = "Alterar Meta";
+            document.getElementById('btnSalvar').innerText = "Atualizar Meta";
+            document.getElementById('btnCancelar').style.display = "inline-block";
+        }
+
+        function cancelarEdicao() {
+            document.getElementById('formMeta').reset();
+            document.getElementById('id_meta').value = "";
+            document.getElementById('tituloForm').innerText = "Nova Meta de Estudo";
+            document.getElementById('btnSalvar').innerText = "Salvar Meta";
+            document.getElementById('btnCancelar').style.display = "none";
+            document.getElementById('mensagem').innerText = "";
+        }
+
+        // Excluir meta
+        async function excluirMeta(id) {
+            if (!confirm("Tem certeza que deseja apagar esta meta?")) return;
+
+            const token = obterToken();
+            if (!token) return;
+
+            try {
+                const resposta = await fetch('metaAPI.php', {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ id_meta: id })
+                });
+
+                const texto = await resposta.text();
+
+                try {
+                    const resultado = JSON.parse(texto);
+
+                    if (resposta.ok) {
+                        alert(resultado.mensagem || "Meta excluída com sucesso!");
+                        carregarMetas();
+                    } else {
+                        alert("Erro ao excluir: " + (resultado.erro || "Erro desconhecido"));
+                    }
+                } catch (e) {
+                    console.error("Resposta não é JSON:", texto);
+                    alert("Erro no servidor PHP ao tentar excluir.");
+                }
+            } catch (e) {
+                console.error("Erro na exclusão:", e);
+                alert("Erro ao conectar com o servidor.");
+            }
+        }
+
+        // Inicialização ao abrir a página
+        window.onload = async () => {
+            await carregarMateriasSelect();
+            await carregarMetas();
+        };
     </script>
 </body>
 </html>

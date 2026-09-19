@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gráfico - Evolução Diária</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <h2>📈 Evolução Diária dos Estudos</h2>
+    <p>Minutos estudados por dia nos últimos 14 dias.</p>
+
+    <div class="chart-container">
+        <canvas id="canvasEvolucao"></canvas>
+    </div>
+
+    <br>
+   <button type="button" onclick="window.location.href='estudoMateria.html'">Estudo por Materia</button>
+    <button type="button" onclick="window.location.href='registroDeEstudo.html'">Registro de Estudo</button>
+   <button type="button" onclick="window.location.href='home.html'">Home</button></button>
+
+    <script>
+        function obterToken() {
+            let token = localStorage.getItem('token_jwt');
+            if (!token) {
+                window.location.href = 'login.html';
+                return null;
+            }
+            return token.replace(/^"|"$/g, '');
+        }
+
+        async function carregarGraficoEvolucao() {
+            const token = obterToken();
+            if (!token) return;
+
+            try {
+                const resposta = await fetch('evolucaoAPI.php', {
+                    method: 'GET',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                const json = await resposta.json();
+
+                if (!resposta.ok) {
+                    alert(json.erro || 'Erro ao carregar dados.');
+                    return;
+                }
+
+                if (json.labels.length === 0) {
+                    document.querySelector('.chart-container').innerHTML = '<p>Nenhum registro recente encontrado nos últimos 14 dias.</p>';
+                    return;
+                }
+
+                const ctx = document.getElementById('canvasEvolucao').getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: json.labels,
+                        datasets: [{
+                            label: 'Minutos Dedicados',
+                            data: json.datasets,
+                            borderColor: '#36A2EB',
+                            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                            fill: true,
+                            tension: 0.3,
+                            pointRadius: 5
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: { display: true, text: 'Minutos' }
+                            },
+                            x: {
+                                title: { display: true, text: 'Data' }
+                            }
+                        }
+                    }
+                });
+
+            } catch (err) {
+                console.error("Erro ao gerar gráfico de evolução:", err);
+            }
+        }
+
+        window.onload = carregarGraficoEvolucao;
+    </script>
+</body>
+</html>

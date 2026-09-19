@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timer Personalizado - RepoStudium</title>
+</head>
+<body>
+
+    <div class="pomodoro-card">
+        <h2>⏱️ Timer Personalizado</h2>
+        
+        <div id="badgeModo" class="status-badge modo-foco" style="margin-top: 10px;">Modo Foco</div>
+        
+        <div id="timer" class="timer-display">25:00</div>
+
+        <div class="config-tempo">
+            <div class="form-grupo">
+                <label for="tempoFoco">Foco (min):</label>
+                <input type="number" id="tempoFoco" value="25" min="1" max="180" onchange="atualizarTempoConfigurado()">
+            </div>
+            <div class="form-grupo">
+                <label for="tempoPausa">Descanso (min):</label>
+                <input type="number" id="tempoPausa" value="5" min="1" max="60" onchange="atualizarTempoConfigurado()">
+            </div>
+        </div>
+
+        <div class="controles">
+            <button id="btnPlay" class="btn-iniciar" onclick="iniciarTimer()">Iniciar</button>
+            <button id="btnPause" class="btn-pausar" onclick="pausarTimer()" style="display: none;">Pausar</button>
+            <button class="btn-reset" onclick="resetarTimer()">Resetar</button>
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+
+        <h3>💾 Registrar Sessão</h3>
+        
+        <div class="form-grupo" style="margin-top: 15px;">
+            <label for="selectMateria">Matéria Estudada:*</label>
+            <select id="selectMateria">
+                <option value="">Carregando matérias...</option>
+            </select>
+        </div>
+
+        <div class="form-grupo" style="margin-top: 10px;">
+            <label for="minutosEstudados">Minutos a Registrar:*</label>
+            <input type="number" id="minutosEstudados" value="25" min="1" required>
+        </div>
+
+        <button class="btn-salvar" onclick="salvarEstudoPomodoro()">Salvar no Histórico</button>
+
+        <div id="mensagem" style="margin-top: 10px; font-size: 0.9rem; font-weight: bold;"></div>
+
+        <a href="home.html" class="btn-voltar">← Voltar ao Home</a>
+    </div>
+
+    <script>
+        function obterToken() {
+            let token = localStorage.getItem('token_jwt');
+            if (!token || token === "undefined" || token === "null") {
+                window.location.href = 'login.html';
+                return null;
+            }
+            return token.replace(/^"|"$/g, '');
+        }
+
+        let tempoRestante = 25 * 60;
+        let timerInterval = null;
+        let emFoco = true;
+
+        const displayTimer = document.getElementById('timer');
+        const badgeModo = document.getElementById('badgeModo');
+        const btnPlay = document.getElementById('btnPlay');
+        const btnPause = document.getElementById('btnPause');
+
+        function atualizarDisplay() {
+            const minutos = Math.floor(tempoRestante / 60);
+            const segundos = tempoRestante % 60;
+            displayTimer.innerText = `${String(minutos).padStart(2, '0')}:${String(segundos).padStart(2, '0')}`;
+            document.title = `(${displayTimer.innerText}) Timer - RepoStudium`;
+        }
+
+        // Atualiza o tempo atual se o timer não estiver rodando
+        function atualizarTempoConfigurado() {
+            if (timerInterval) return; // Se estiver rodando, ignora alterações até resetar
+
+            const focoMin = parseInt(document.getElementById('tempoFoco').value) || 25;
+            const descansoMin = parseInt(document.getElementById('tempoPausa').value) || 5;
+
+            if (emFoco) {
+                tempoRestante = focoMin * 60;
+                document.getElementById('minutosEstudados').value = focoMin; // Preenche automático
+            } else {
+                tempoRestante = descansoMin * 60;
+            }
+            atualizarDisplay();
+        }
+
+        function iniciarTimer() {
+            if (timerInterval) return;
+
+            // Bloqueia alterar os inputs de tempo durante a execução
+            document.getElementById('tempoFoco').disabled = true;
+            document.getElementById('tempoPausa').disabled = true;
+
+            btnPlay.style.display = 'none';
+            btnPause.style.display = 'inline-block';
+
+            timerInterval = setInterval(() => {
+                if (tempoRestante > 0) {
+                    tempoRestante--;
+                    atualizarDisplay();
+                } else {
+                    clearInterval(timerInterval);
+                    timerInterval = null;
+                    alert(emFoco ? "🎉 Fim do tempo de Foco! Hora do descanso." : "🔔 Descanso finalizado! Hora de voltar ao trabalho.");
+                    alternarModo();
+                }
+            }, 1000);
+        }
+
+        function pausarTimer() {
+            clearInterval(timerInterval);
+            timerInterval = null;
+            btnPlay.style.display = 'inline-block';
+            btnPause.style.display = 'none';
+        }
+
+        function resetarTimer() {
+            pausarTimer();
+            document.getElementById('tempoFoco').disabled = false;
+            document.getElementById('tempoPausa').disabled = false;
+            atualizarTempoConfigurado();
+        }
+
+        function alternarModo() {
+            emFoco = !emFoco;
+            const focoMin = parseInt(document.getElementById('tempoFoco').value) || 25;
+            const descansoMin = parseInt(document.getElementById('tempoPausa').value) || 5;
+
+            if (emFoco) {
+                tempoRestante = focoMin * 60;
+                badgeModo.innerText = `Modo Foco (${focoMin} min)`;
+                badgeModo.className = "status-badge modo-foco";
+            } else {
+                tempoRestante = descansoMin * 60;
+                badgeModo.innerText = `Pausa (${descansoMin} min)`;
+                badgeModo.className = "status-badge modo-pausa";
+            }
+
+            atualizarDisplay();
+            btnPlay.style.display = 'inline-block';
+            btnPause.style.display = 'none';
+        }
+
+        async function carregarMaterias() {
+            const token = obterToken();
+            if (!token) return;
+
+            const select = document.getElementById('selectMateria');
+
+            try {
+                const resposta = await fetch('materiaAPI.php', {
+                    method: 'GET',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                const materias = await resposta.json();
+
+                if (resposta.ok && Array.isArray(materias)) {
+                    select.innerHTML = '<option value="">Selecione a matéria</option>';
+                    materias.forEach(m => {
+                        const opt = document.createElement('option');
+                        opt.value = m.id_materia;
+                        opt.textContent = m.nome_materia;
+                        select.appendChild(opt);
+                    });
+                } else {
+                    select.innerHTML = '<option value="">Erro ao carregar matérias</option>';
+                }
+            } catch (e) {
+                console.error("Erro ao listar matérias:", e);
+                select.innerHTML = '<option value="">Erro de conexão</option>';
+            }
+        }
+
+        async function salvarEstudoPomodoro() {
+            const token = obterToken();
+            if (!token) return;
+
+            const idMateria = document.getElementById('selectMateria').value;
+            const minutos = document.getElementById('minutosEstudados').value;
+            const msgDiv = document.getElementById('mensagem');
+
+            if (!idMateria || !minutos) {
+                msgDiv.style.color = "red";
+                msgDiv.innerText = "Selecione uma matéria e informe os minutos.";
+                return;
+            }
+
+            const hoje = new Date().toISOString().split('T')[0];
+
+            const dados = {
+                id_materia: idMateria,
+                minuto_dedicado: minutos,
+                data_registro_estudo: hoje,
+                observacao: "Sessão concluída via Timer Personalizado"
+            };
+
+            try {
+                const resposta = await fetch('registroDeEstudoAPI.php', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(dados)
+                });
+
+                const resultado = await resposta.json();
+
+                if (resposta.ok) {
+                    msgDiv.style.color = "green";
+                    msgDiv.innerText = "✅ Sessão salva no histórico!";
+                } else {
+                    msgDiv.style.color = "red";
+                    msgDiv.innerText = "Erro: " + (resultado.erro || "Falha ao salvar");
+                }
+            } catch (e) {
+                console.error("Erro ao salvar registro:", e);
+                msgDiv.style.color = "red";
+                msgDiv.innerText = "Erro de conexão com a API.";
+            }
+        }
+
+        window.onload = () => {
+            obterToken();
+            carregarMaterias();
+            atualizarTempoConfigurado();
+        };
+    </script>
+</body>
+</html>

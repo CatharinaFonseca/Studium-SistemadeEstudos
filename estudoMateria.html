@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gráfico - Tempo por Matéria</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+</head>
+<body>
+
+    <h2>⏱️ Tempo Dedicado por Matéria</h2>
+    <p>Distribuição acumulada de minutos estudados por disciplina.</p>
+
+    <div class="chart-container">
+        <canvas id="canvasMaterias"></canvas>
+    </div>
+
+    <br>
+    <button type="button" onclick="window.location.href='evolucao.html'">Evolução</button>
+    <button type="button" onclick="window.location.href='registroDeEstudo.html'">Registro de Estudo</button>
+   <button type="button" onclick="window.location.href='home.html'">Home</button></button>
+
+    <script>
+        function obterToken() {
+            let token = localStorage.getItem('token_jwt');
+            if (!token) {
+                window.location.href = 'login.html';
+                return null;
+            }
+            return token.replace(/^"|"$/g, '');
+        }
+
+        async function carregarGrafico() {
+            const token = obterToken();
+            if (!token) return;
+
+            try {
+                const resposta = await fetch('estudoMateriaAPI.php', {
+                    method: 'GET',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (!resposta.ok) {
+                    alert('Erro ao carregar dados do gráfico.');
+                    return;
+                }
+
+                const json = await resposta.json();
+
+                if (!json.labels || json.labels.length === 0) {
+                    document.querySelector('.chart-container').innerHTML = '<p>Nenhum registro de estudo encontrado.</p>';
+                    return;
+                }
+
+                const ctx = document.getElementById('canvasMaterias').getContext('2d');
+                new Chart(ctx, {
+                    type: 'pie', // Pode ser 'pie' (pizza) ou 'doughnut' (rosca)
+                    data: {
+                        labels: json.labels,
+                        datasets: [{
+                            label: 'Minutos Estudados',
+                            data: json.datasets,
+                            backgroundColor: json.cores // Utiliza as cores vindas do banco de dados
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { position: 'bottom' }
+                        }
+                    }
+                });
+
+            } catch (err) {
+                console.error("Erro ao carregar gráfico:", err);
+            }
+        }
+
+        window.onload = carregarGrafico;
+    </script>
+</body>
+</html>

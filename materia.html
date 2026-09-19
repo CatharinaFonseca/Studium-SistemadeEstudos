@@ -3,13 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teste - Cadastrar Matéria</title>
+    <title>Gerenciar Matérias</title>
 </head>
 <body>
 
-    <h2>Cadastrar Nova Matéria</h2>
+    <h2 id="tituloForm">Cadastrar Nova Matéria</h2>
 
     <form id="formMateria">
+        <!-- Campo oculto para armazenar o ID durante a edição -->
+        <input type="hidden" id="id_materia">
+
         <label for="nome_materia">Nome da Matéria:</label><br>
         <input type="text" id="nome_materia" placeholder="Ex: Matemática, História..." required>
         <br><br>
@@ -18,39 +21,124 @@
         <input type="color" id="cor_materia" value="#706f6f">
         <br><br>
 
-        <button type="submit">Salvar Matéria</button>
+        <button type="submit" id="btnSalvar">Salvar Matéria</button>
+        <button type="button" id="btnCancelar" style="display: none;" onclick="cancelarEdicao()">Cancelar Edição</button>
         <br><br>
         
-        <button type="button" onclick="window.location.href='meta.html'">Adicionar Meta</button>
+        <button type="button" onclick="window.location.href='home.html'">Home</button>
     </form>
 
     <div id="mensagem" style="margin-top: 15px; font-weight: bold;"></div>
 
+    <hr style="margin: 20px 0;">
+
+    <h3>Minhas Matérias</h3>
+    <table border="1" cellpadding="8" style="border-collapse: collapse; width: 100%; max-width: 600px;">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nome</th>
+                <th>Cor</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody id="tabelaMaterias">
+            <tr>
+                <td colspan="4">Carregando matérias...</td>
+            </tr>
+        </tbody>
+    </table>
+
     <script>
+        // Função para obter e sanitizar o token JWT
+        function obterToken() {
+            let token = localStorage.getItem('token_jwt');
+            if (!token || token === "undefined" || token === "null") {
+                return null;
+            }
+            return token.replace(/^"|"$/g, '');
+        }
+
+        // --- 1. LISTAR MATÉRIAS (GET) ---
+        async function carregarMaterias() {
+            const token = obterToken();
+            const tabela = document.getElementById('tabelaMaterias');
+
+            if (!token) {
+                tabela.innerHTML = '<tr><td colspan="4" style="color:red;">Sessão inválida. Faça login novamente.</td></tr>';
+                return;
+            }
+
+            try {
+                const resposta = await fetch('materiaAPI.php', {
+                    method: 'GET',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                const texto = await resposta.text();
+
+                try {
+                    const materias = JSON.parse(texto);
+
+                    if (!resposta.ok) {
+                        tabela.innerHTML = `<tr><td colspan="4" style="color:red;">${materias.erro || 'Erro ao buscar matérias.'}</td></tr>`;
+                        return;
+                    }
+
+                    if (materias.length === 0) {
+                        tabela.innerHTML = '<tr><td colspan="4">Nenhuma matéria cadastrada.</td></tr>';
+                        return;
+                    }
+
+                    tabela.innerHTML = '';
+                    materias.forEach(materia => {
+                        tabela.innerHTML += `
+                            <tr>
+                                <td>${materia.id_materia}</td>
+                                <td>${materia.nome_materia}</td>
+                                <td style="background-color: ${materia.cor_materia};"></td>
+                                <td>
+                                    <button type="button" onclick="prepararEdicao(${materia.id_materia}, '${materia.nome_materia}', '${materia.cor_materia}')">Alterar</button>
+                                    <button type="button" onclick="excluirMateria(${materia.id_materia})">Apagar</button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                } catch (e) {
+                    console.error("Resposta do servidor não é JSON:", texto);
+                    tabela.innerHTML = '<tr><td colspan="4" style="color:red;">Erro ao processar dados do servidor.</td></tr>';
+                }
+            } catch (erro) {
+                console.error("Erro ao carregar matérias:", erro);
+                tabela.innerHTML = '<tr><td colspan="4" style="color:red;">Erro ao conectar com o servidor.</td></tr>';
+            }
+        }
+
+        // --- 2. CADASTRAR (POST) OU ALTERAR (PUT) ---
         document.getElementById('formMateria').addEventListener('submit', async (e) => {
             e.preventDefault();
 
             const divMensagem = document.getElementById('mensagem');
-            let token = localStorage.getItem('token_jwt');
+            const token = obterToken();
 
-            console.log("Token lido do localStorage:", token);
-
-            if (!token || token === "undefined" || token === "null") {
+            if (!token) {
                 divMensagem.style.color = 'red';
                 divMensagem.innerText = "Sessão ausente ou inválida. Faça login novamente.";
                 return;
             }
 
-            token = token.replace(/^"|"$/g, ''); 
-
+            const idMateria = document.getElementById('id_materia').value;
             const dados = {
+                id_materia: idMateria || null,
                 nome_materia: document.getElementById('nome_materia').value,
                 cor_materia: document.getElementById('cor_materia').value
             };
 
+            const metodo = idMateria ? 'PUT' : 'POST';
+
             try {
                 const resposta = await fetch('materiaAPI.php', {
-                    method: 'POST',
+                    method: metodo,
                     headers: {
                         'Authorization': 'Bearer ' + token,
                         'Content-Type': 'application/json'
@@ -61,17 +149,16 @@
                 const textoResposta = await resposta.text();
 
                 try {
-                    // Tenta converter o texto para JSON
                     const resultado = JSON.parse(textoResposta);
 
                     if (resposta.ok) {
-                        alert(resultado.mensagem);
-                        document.getElementById('formMateria').reset();
+                        alert(resultado.mensagem || "Operação realizada com sucesso!");
+                        cancelarEdicao();
+                        carregarMaterias();
                     } else {
-                        alert("Erro da API: " + resultado.erro);
+                        alert("Erro da API: " + (resultado.erro || "Erro desconhecido"));
                     }
                 } catch (e) {
-                    //  Se não for JSON, exibe o erro do PHP no Console e na tela!
                     console.error("Resposta do servidor não é JSON:", textoResposta);
                     alert("Erro no Servidor PHP! Veja o Console (F12) para os detalhes.");
                 }
@@ -81,6 +168,69 @@
                 divMensagem.innerText = "Erro ao se conectar com o servidor.";
             }
         });
+
+        // --- 3. PREPARAR EDIÇÃO NO FORMULÁRIO ---
+        function prepararEdicao(id, nome, cor) {
+            document.getElementById('id_materia').value = id;
+            document.getElementById('nome_materia').value = nome;
+            document.getElementById('cor_materia').value = cor;
+
+            document.getElementById('tituloForm').innerText = "Alterar Matéria";
+            document.getElementById('btnSalvar').innerText = "Atualizar Matéria";
+            document.getElementById('btnCancelar').style.display = "inline-block";
+        }
+
+        function cancelarEdicao() {
+            document.getElementById('formMateria').reset();
+            document.getElementById('id_materia').value = "";
+            document.getElementById('tituloForm').innerText = "Cadastrar Nova Matéria";
+            document.getElementById('btnSalvar').innerText = "Salvar Matéria";
+            document.getElementById('btnCancelar').style.display = "none";
+        }
+
+        // --- 4. EXCLUIR MATÉRIA (DELETE) ---
+        async function excluirMateria(id) {
+            if (!confirm("Tem certeza que deseja apagar esta matéria?")) return;
+
+            const token = obterToken();
+            if (!token) {
+                alert("Sessão inválida!");
+                return;
+            }
+
+            try {
+                const resposta = await fetch('materiaAPI.php', {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ id_materia: id })
+                });
+
+                const texto = await resposta.text();
+
+                try {
+                    const resultado = JSON.parse(texto);
+
+                    if (resposta.ok) {
+                        alert(resultado.mensagem || "Matéria excluída com sucesso!");
+                        carregarMaterias();
+                    } else {
+                        alert("Erro ao excluir: " + (resultado.erro || "Erro desconhecido"));
+                    }
+                } catch (e) {
+                    console.error("Resposta não JSON ao excluir:", texto);
+                    alert("Erro no Servidor PHP ao tentar excluir.");
+                }
+            } catch (e) {
+                console.error("Erro na exclusão:", e);
+                alert("Erro ao conectar com o servidor.");
+            }
+        }
+
+        // Executa ao carregar a página
+        window.onload = carregarMaterias;
     </script>
 </body>
 </html>

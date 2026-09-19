@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meu Perfil - RepoStudium</title>
+</head>
+<body>
+
+    <div class="perfil-card">
+        <h2>👤 Meu Perfil</h2>
+
+        <form id="formPerfil" onsubmit="atualizarPerfil(event)">
+            
+            <div class="form-grupo">
+                <label for="nome">Nome Completo:*</label>
+                <input type="text" id="nome" required>
+            </div>
+
+            <div class="form-grupo">
+                <label for="email">E-mail:*</label>
+                <input type="email" id="email" required>
+            </div>
+
+            <hr class="divisor">
+            <h3 class="subtitulo">🔒 Alterar Senha (Opcional)</h3>
+
+            <div class="form-grupo">
+                <label for="senhaAtual">Senha Atual:</label>
+                <input type="password" id="senhaAtual" placeholder="Preencha apenas se for alterar a senha">
+            </div>
+
+            <div class="form-grupo">
+                <label for="novaSenha">Nova Senha:</label>
+                <input type="password" id="novaSenha" placeholder="Mínimo de 6 caracteres">
+            </div>
+
+            <button type="submit" class="btn-salvar">Salvar Alterações</button>
+        </form>
+
+        <div id="mensagem"></div>
+
+        <a href="home.html" class="btn-voltar">← Home</a>
+    </div>
+
+    <script>
+        function obterToken() {
+            let token = localStorage.getItem('token_jwt');
+            if (!token || token === "undefined" || token === "null") {
+                window.location.href = 'login.html';
+                return null;
+            }
+            return token.replace(/^"|"$/g, '');
+        }
+
+        function exibirMensagem(texto, ehSucesso) {
+            const msgDiv = document.getElementById('mensagem');
+            msgDiv.innerText = texto;
+            msgDiv.className = ehSucesso ? 'msg-sucesso' : 'msg-erro';
+            msgDiv.style.display = 'block';
+        }
+
+        // --- 1. CARREGAR DADOS DO USUÁRIO NA TELA ---
+        async function carregarPerfil() {
+            const token = obterToken();
+            if (!token) return;
+
+            try {
+                const resposta = await fetch('perfilAPI.php', {
+                    method: 'GET',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                const dados = await resposta.json();
+
+                if (resposta.ok) {
+                    document.getElementById('nome').value = dados.nome_usuario || '';
+                    document.getElementById('email').value = dados.email_usuario || '';
+                } else {
+                    exibirMensagem(dados.erro || 'Erro ao carregar dados do perfil.', false);
+                }
+            } catch (erro) {
+                console.error("Erro ao carregar perfil:", erro);
+                exibirMensagem("Erro de conexão com o servidor.", false);
+            }
+        }
+
+        // --- 2. ENVIAR DADOS ATUALIZADOS PARA O BACKEND ---
+        async function atualizarPerfil(event) {
+            event.preventDefault();
+
+            const token = obterToken();
+            if (!token) return;
+
+            const nome = document.getElementById('nome').value;
+            const email = document.getElementById('email').value;
+            const senhaAtual = document.getElementById('senhaAtual').value;
+            const novaSenha = document.getElementById('novaSenha').value;
+
+            if (novaSenha && !senhaAtual) {
+                exibirMensagem("Informe sua senha atual para definir uma nova senha.", false);
+                return;
+            }
+
+            const corpo = {
+                nome_usuario: nome,
+                email_usuario: email,
+                senha_atual: senhaAtual,
+                nova_senha: novaSenha
+            };
+
+            try {
+                const resposta = await fetch('perfilAPI.php', {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(corpo)
+                });
+
+                const resultado = await resposta.json();
+
+                if (resposta.ok) {
+                    exibirMensagem(resultado.mensagem, true);
+                    document.getElementById('senhaAtual').value = '';
+                    document.getElementById('novaSenha').value = '';
+                } else {
+                    exibirMensagem(resultado.erro || 'Erro ao atualizar o perfil.', false);
+                }
+            } catch (erro) {
+                console.error("Erro ao atualizar perfil:", erro);
+                exibirMensagem("Erro de conexão com o servidor.", false);
+            }
+        }
+
+        window.onload = carregarPerfil;
+    </script>
+</body>
+</html>

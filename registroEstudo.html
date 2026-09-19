@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciar Registros de Estudo</title>
+</head>
+<body>
+
+    <h2 id="tituloForm">Cadastrar Registro de Estudo</h2>
+
+    <!-- Formulário para Cadastrar e Editar Registro de Estudo -->
+    <form id="formRegistroEstudo">
+        <input type="hidden" id="id_registro_estudo">
+
+        <div class="form-group">
+            <label for="id_materia">Matéria:*</label><br>
+            <select id="id_materia" required>
+                <option value="">Carregando matérias...</option>
+            </select>
+        </div><br>
+
+        <div class="form-group">
+            <label for="minuto_dedicado">Minutos Dedicados:*</label><br>
+            <input type="number" id="minuto_dedicado" placeholder="Ex: 45" required>
+        </div><br>
+
+        <div class="form-group">
+            <label for="data_registro_estudo">Data do Estudo:*</label><br>
+            <input type="date" id="data_registro_estudo" required>
+        </div><br>
+
+        <div class="form-group">
+            <label for="observacao">Observação:</label><br>
+            <textarea id="observacao" rows="3" placeholder="Ex: Leitura dos capítulos 1 e 2"></textarea>
+        </div><br>
+
+        <button type="submit" id="btnSalvar">Salvar Registro</button>
+        <button type="button" id="btnCancelar" style="display: none;" onclick="cancelarEdicao()">Cancelar Edição</button>
+        <br><br>
+
+        <button type="button" onclick="window.location.href='materia.html'">Gerenciar Matérias</button>
+        <button type="button" onclick="window.location.href='meta.html'">Gerenciar Metas</button>
+    </form>
+
+    <div id="resultado" style="display: none; padding: 10px; margin-top: 15px; font-weight: bold;"></div>
+
+    <hr style="margin: 20px 0;">
+
+    <h3>Meus Registros de Estudo</h3>
+    <table border="1" cellpadding="8" style="border-collapse: collapse; width: 100%; max-width: 800px;">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Matéria</th>
+                <th>Min. Dedicados</th>
+                <th>Data</th>
+                <th>Observação</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody id="tabelaRegistros">
+            <tr>
+                <td colspan="6">Carregando registros...</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <script>
+        // --- FUNÇÃO AUXILIAR PARA TOKEN ---
+        function obterToken() {
+            let token = localStorage.getItem('token_jwt');
+            if (!token || token === "undefined" || token === "null") {
+                alert('Sessão expirada. Faça login novamente.');
+                window.location.href = 'login.html';
+                return null;
+            }
+            return token.replace(/^"|"$/g, '');
+        }
+
+        // Mapeamento local das matérias (id_materia => nome_materia)
+        const mapaMaterias = {};
+
+        // --- 1. CARREGAR MATÉRIAS NO SELECT ---
+        async function carregarMateriasSelect() {
+            const token = obterToken();
+            if (!token) return;
+
+            const selectMateria = document.getElementById('id_materia');
+
+            try {
+                const resposta = await fetch('materiaAPI.php', {
+                    method: 'GET',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                const texto = await resposta.text();
+                const materias = JSON.parse(texto);
+
+                if (resposta.ok && Array.isArray(materias)) {
+                    selectMateria.innerHTML = '<option value="">Selecione uma matéria</option>';
+                    materias.forEach(m => {
+                        mapaMaterias[m.id_materia] = m.nome_materia;
+                        const opt = document.createElement('option');
+                        opt.value = m.id_materia;
+                        opt.textContent = m.nome_materia;
+                        selectMateria.appendChild(opt);
+                    });
+                } else {
+                    selectMateria.innerHTML = '<option value="">Erro ao carregar matérias</option>';
+                }
+            } catch (e) {
+                console.error("Erro ao listar matérias:", e);
+                selectMateria.innerHTML = '<option value="">Erro de conexão</option>';
+            }
+        }
+
+        // --- 2. CARREGAR LISTA DE REGISTROS (GET) ---
+        async function carregarRegistros() {
+            const token = obterToken();
+            if (!token) return;
+
+            const tabela = document.getElementById('tabelaRegistros');
+
+            try {
+                const resposta = await fetch('registroDeEstudoAPI.php', {
+                    method: 'GET',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                const texto = await resposta.text();
+
+                try {
+                    const registros = JSON.parse(texto);
+
+                    if (!resposta.ok) {
+                        tabela.innerHTML = `<tr><td colspan="6" style="color:red;">${registros.erro || 'Erro ao carregar registros.'}</td></tr>`;
+                        return;
+                    }
+
+                    if (registros.length === 0) {
+                        tabela.innerHTML = '<tr><td colspan="6">Nenhum registro encontrado.</td></tr>';
+                        return;
+                    }
+
+                    tabela.innerHTML = '';
+                    registros.forEach(reg => {
+                        const nomeMateria = mapaMaterias[reg.id_materia] || reg.nome_materia || reg.id_materia;
+                        const dataFmt = reg.data_registro_estudo ? reg.data_registro_estudo.split('-').reverse().join('/') : '-';
+                        const obs = reg.observacao || '-';
+
+                        tabela.innerHTML += `
+                            <tr>
+                                <td>${reg.id_registro_estudo}</td>
+                                <td>${nomeMateria}</td>
+                                <td>${reg.minuto_dedicado} min</td>
+                                <td>${dataFmt}</td>
+                                <td>${obs}</td>
+                                <td>
+                                    <button type="button" onclick="prepararEdicao(${reg.id_registro_estudo}, ${reg.id_materia}, ${reg.minuto_dedicado}, '${reg.data_registro_estudo}', '${escapeHtml(obs)}')">Alterar</button>
+                                    <button type="button" onclick="excluirRegistro(${reg.id_registro_estudo})">Apagar</button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                } catch (e) {
+                    console.error("Resposta não é JSON:", texto);
+                    tabela.innerHTML = '<tr><td colspan="6" style="color:red;">Erro ao processar resposta do servidor.</td></tr>';
+                }
+            } catch (e) {
+                console.error("Erro ao carregar registros:", e);
+                tabela.innerHTML = '<tr><td colspan="6" style="color:red;">Erro ao conectar com o servidor.</td></tr>';
+            }
+        }
+
+        // Escape de caracteres para evitar erros ao passar textos na chamada JavaScript
+        function escapeHtml(str) {
+            return str ? str.replace(/'/g, "\\'").replace(/"/g, "&quot;") : '';
+        }
+
+        // --- 3. CADASTRAR (POST) OU ALTERAR (PUT) REGISTRO ---
+        document.getElementById('formRegistroEstudo').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const token = obterToken();
+            if (!token) return;
+
+            const divResultado = document.getElementById('resultado');
+            const idRegistro = document.getElementById('id_registro_estudo').value;
+
+            const dadosForm = {
+                id_registro_estudo: idRegistro || null,
+                id_materia: document.getElementById('id_materia').value,
+                minuto_dedicado: document.getElementById('minuto_dedicado').value,
+                data_registro_estudo: document.getElementById('data_registro_estudo').value,
+                observacao: document.getElementById('observacao').value
+            };
+
+            const metodo = idRegistro ? 'PUT' : 'POST';
+
+            try {
+                const resposta = await fetch('registroDeEstudoAPI.php', {
+                    method: metodo,
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(dadosForm)
+                });
+
+                const texto = await resposta.text();
+
+                try {
+                    const resultado = JSON.parse(texto);
+                    divResultado.style.display = 'block';
+
+                    if (resposta.ok) {
+                        divResultado.style.color = 'green';
+                        divResultado.innerText = resultado.mensagem || 'Registro salvo com sucesso!';
+                        cancelarEdicao();
+                        carregarRegistros();
+                    } else {
+                        divResultado.style.color = 'red';
+                        divResultado.innerText = 'Erro: ' + (resultado.erro || 'Falha ao salvar registro.');
+                    }
+                } catch (err) {
+                    console.error("O PHP não retornou JSON válido:", texto);
+                    divResultado.style.display = 'block';
+                    divResultado.style.color = 'red';
+                    divResultado.innerHTML = '<strong>Erro de PHP no servidor:</strong><br>' + texto;
+                }
+            } catch (erro) {
+                console.error("Erro de conexão:", erro);
+                divResultado.style.display = 'block';
+                divResultado.style.color = 'red';
+                divResultado.innerText = 'Erro de conexão com o servidor.';
+            }
+        });
+
+        // --- 4. PREPARAR FORMULÁRIO PARA EDIÇÃO ---
+        function prepararEdicao(id, idMateria, minutos, data, observacao) {
+            document.getElementById('id_registro_estudo').value = id;
+            document.getElementById('id_materia').value = idMateria;
+            document.getElementById('minuto_dedicado').value = minutos;
+            document.getElementById('data_registro_estudo').value = data;
+            document.getElementById('observacao').value = observacao === '-' ? '' : observacao;
+
+            document.getElementById('tituloForm').innerText = "Alterar Registro de Estudo";
+            document.getElementById('btnSalvar').innerText = "Atualizar Registro";
+            document.getElementById('btnCancelar').style.display = "inline-block";
+        }
+
+        function cancelarEdicao() {
+            document.getElementById('formRegistroEstudo').reset();
+            document.getElementById('id_registro_estudo').value = "";
+            document.getElementById('tituloForm').innerText = "Cadastrar Registro de Estudo";
+            document.getElementById('btnSalvar').innerText = "Salvar Registro";
+            document.getElementById('btnCancelar').style.display = "none";
+            document.getElementById('resultado').style.display = "none";
+        }
+
+        // --- 5. EXCLUIR REGISTRO (DELETE) ---
+        async function excluirRegistro(id) {
+            if (!confirm("Tem certeza que deseja apagar este registro de estudo?")) return;
+
+            const token = obterToken();
+            if (!token) return;
+
+            try {
+                const resposta = await fetch('registroDeEstudoAPI.php', {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ id_registro_estudo: id })
+                });
+
+                const texto = await resposta.text();
+
+                try {
+                    const resultado = JSON.parse(texto);
+
+                    if (resposta.ok) {
+                        alert(resultado.mensagem || "Registro excluído com sucesso!");
+                        carregarRegistros();
+                    } else {
+                        alert("Erro ao excluir: " + (resultado.erro || "Erro desconhecido"));
+                    }
+                } catch (e) {
+                    console.error("Resposta não é JSON:", texto);
+                    alert("Erro no servidor PHP ao tentar excluir.");
+                }
+            } catch (e) {
+                console.error("Erro na exclusão:", e);
+                alert("Erro ao conectar com o servidor.");
+            }
+        }
+
+        // Inicialização ao carregar a página
+        window.onload = async () => {
+            await carregarMateriasSelect();
+            await carregarRegistros();
+        };
+    </script>
+</body>
+</html>

@@ -21,6 +21,7 @@
         <br><br>
 
         <button type="submit">Entrar</button>
+        <button type="button" onclick="window.location.href='recupSenha.php'">Esqueceu a senha?</button>
     </form>
 
     <div id="mensagem" style="margin-top: 15px;"></div>
@@ -52,7 +53,7 @@
                     if (tokenGerado) {
                         localStorage.setItem('token_jwt', tokenGerado);
                         console.log("Token salvo com sucesso:", tokenGerado);
-                        window.location.href = 'materia.html';
+                        window.location.href = 'home.html';
                     } else {
                         console.error("A API não retornou uma chave 'token' ou 'jwt':", dados);
                         alert("Erro: A resposta do servidor não continha um Token válido.");

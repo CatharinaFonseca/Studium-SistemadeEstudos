@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel do Estudante - RepoStudium</title>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>🎓 RepoStudium</h1>
+            <p>Selecione uma opção para gerenciar seus estudos ou visualizar seu desempenho.</p>
+        </header>
+
+        <h2 class="secao-titulo">📝 Gestão e Registros</h2>
+        <div class="grid-botoes">
+            
+            <a href="registroEstudo.html" class="card-btn card-cadastro">
+                <div class="icon">⏱️</div>
+                <div class="info">
+                    <h3>Registros de Estudo</h3>
+                    <p>Cadastre, altere ou exclua sessões de estudo realizadas.</p>
+                </div>
+            </a>
+
+            <a href="materia.html" class="card-btn card-cadastro">
+                <div class="icon">📚</div>
+                <div class="info">
+                    <h3>Minhas Matérias</h3>
+                    <p>Gerencie as disciplinas e assuntos cadastrados.</p>
+                </div>
+            </a>
+
+            <a href="meta.html" class="card-btn card-cadastro">
+                <div class="icon">🎯</div>
+                <div class="info">
+                    <h3>Minhas Metas</h3>
+                    <p>Defina objetivos de horas e acompanhe prazos.</p>
+                </div>
+            </a>
+
+        </div>
+
+        <h2 class="secao-titulo">📊 Gráficos de Desempenho</h2>
+        <div class="grid-botoes">
+            
+            <a href="estudoMateria.html" class="card-btn card-grafico">
+                <div class="icon">🍩</div>
+                <div class="info">
+                    <h3>Tempo por Matéria</h3>
+                    <p>Gráfico de rosca com a distribuição de tempo por disciplina.</p>
+                </div>
+            </a>
+
+            <a href="evolucao.html" class="card-btn card-grafico-alt">
+                <div class="icon">📈</div>
+                <div class="info">
+                    <h3>Evolução Diária</h3>
+                    <p>Gráfico de linha mostrando o tempo estudado dia a dia.</p>
+                </div>
+            </a>
+
+        <h2 class="secao-titulo">🍅 Pomodoro</h2>
+            <a href="pomodoro.html" class="card-btn card-cadastro">
+                <div class="icon">🍅</div>
+                <div class="info">
+                    <h3>Timer Pomodoro</h3>
+                    <p>Estude com foco total e registre seus blocos de tempo automaticamente.</p>
+                </div>
+            </a>
+
+        <h2 class="secao-titulo">👤 Perfil</h2>
+            <a href="perfil.html" class="card-btn card-cadastro">
+                <div class="icon">👤</div>
+                <div class="info">
+                    <h3>Perfil</h3>
+                </div>
+            </a>
+
+        </div>
+        <div class="logout-container">
+            <button class="btn-logout" onclick="logout()">Sair do Sistema</button>
+        </div>
+    </div>
+
+    
+
+    <script>
+        // Função para garantir que o usuário está autenticado
+        function verificarAutenticacao() {
+            const token = localStorage.getItem('token_jwt');
+            if (!token || token === "undefined" || token === "null") {
+                window.location.href = 'login.html';
+            }
+        }
+
+        // Função para encerrar a sessão
+        function logout() {
+            if (confirm("Deseja realmente sair?")) {
+                localStorage.removeItem('token_jwt');
+                window.location.href = 'login.html';
+            }
+        }
+
+        // Executa a verificação ao carregar a página
+        window.onload = verificarAutenticacao;
+    </script>
+</body>
+</html>
