@@ -1,0 +1,46 @@
+-- 1. Criação do Banco de Dados
+CREATE DATABASE studium;
+USE studium;
+
+-- 2. Tabela de Usuários
+CREATE TABLE usuario (
+  id_usuario INT AUTO_INCREMENT PRIMARY KEY,
+  nome_usuario VARCHAR(100) NOT NULL,
+  email_usuario VARCHAR(100) NOT NULL UNIQUE,
+  senha_usuario VARCHAR(255) NOT NULL,
+  data_cadastro DATETIME DEFAULT CURRENT_TIMESTAMP
+)
+
+-- 3. Tabela de Matérias
+CREATE TABLE materia (
+  id_materia INT AUTO_INCREMENT PRIMARY KEY,
+  id_usuario INT NOT NULL,
+  nome_materia VARCHAR(100) NOT NULL,
+  cor_materia VARCHAR(7) DEFAULT ,
+  data_criacao DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (id_usuario) REFERENCES usuario (id_usuario) ON DELETE CASCADE
+)
+
+-- 4. Tabela de Metas de Estudo
+CREATE TABLE meta (
+  id_meta INT AUTO_INCREMENT PRIMARY KEY,
+  id_usuario INT NOT NULL,
+  id_materia INT DEFAULT NULL,
+  minutos_alvo INT NOT NULL,
+  data_limite DATE NOT NULL,
+  status_meta ENUM('PEDENTE', 'EM ANDAMENTO', 'CONCLUIDA') DEFAULT 'PEDENTE',
+  FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE CASCADE,
+  FOREIGN KEY (id_materia) REFERENCES materia(id_materia) ON DELETE SET NULL
+)
+
+-- 5. Tabela de Registros de Estudo 
+CREATE TABLE registro_estudo (
+  id_registro_estudo INT AUTO_INCREMENT PRIMARY KEY,
+  id_usuario INT NOT NULL,
+  id_materia INT NOT NULL,
+  minuto_dedicado INT NOT NULL,
+  data_registro_estudo DATE NOT NULL,
+  observacao TEXT DEFAULT NULL,
+  FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE CASCADE,
+  FOREIGN KEY (id_materia) REFERENCES materia(id_materia) ON DELETE CASCADE
+) 
