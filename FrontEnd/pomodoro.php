@@ -1,9 +1,74 @@
+<?php
+session_start();
+$token = $_SESSION['token_jwt'] ?? '';
+
+if (empty($token)) {
+    header('Location: login.php');
+    exit;
+}
+
+$urlMateriaApi = "http://" . $_SERVER['HTTP_HOST'] . "/RepoStudium/BackEnd/materiaAPI.php";
+$urlEstudoApi  = "http://" . $_SERVER['HTTP_HOST'] . "/RepoStudium/BackEnd/registroDeEstudoAPI.php";
+
+$mensagem = "";
+$msgCor = "";
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $id_materia = trim($_POST['id_materia'] ?? '');
+    $minutos    = trim($_POST['minutos_estudados'] ?? '');
+    $hoje       = date('Y-m-d');
+
+    $dadosEnvio = json_encode([
+        'id_materia'           => $id_materia,
+        'minuto_dedicado'      => $minutos,
+        'data_registro_estudo' => $hoje,
+        'observacao'           => "Sessão concluída via Timer Personalizado"
+    ]);
+
+    $ch = curl_init($urlEstudoApi);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $dadosEnvio);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Authorization: Bearer ' . $token,
+        'Content-Type: application/json',
+        'Content-Length: ' . strlen($dadosEnvio)
+    ]);
+    $respostaRaw = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    $resultado = json_decode($respostaRaw, true);
+
+    if ($httpCode >= 200 && $httpCode < 300) {
+        $mensagem = "✅ Sessão salva no histórico!";
+        $msgCor = "green";
+    } else {
+        $mensagem = "Erro: " . ($resultado['erro'] ?? "Falha ao salvar");
+        $msgCor = "red";
+    }
+}
+
+$ch = curl_init($urlMateriaApi);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, ['Authorization: Bearer ' . $token]);
+$respMateria = curl_exec($ch);
+$httpCodeMat = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+curl_close($ch);
+
+$materias = [];
+if ($httpCodeMat === 200) {
+    $materias = json_decode($respMateria, true) ?? [];
+}
+?>
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Timer Personalizado - RepoStudium</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
@@ -35,35 +100,35 @@
 
         <h3>💾 Registrar Sessão</h3>
         
-        <div class="form-grupo" style="margin-top: 15px;">
-            <label for="selectMateria">Matéria Estudada:*</label>
-            <select id="selectMateria">
-                <option value="">Carregando matérias...</option>
-            </select>
-        </div>
+        <form method="POST" action="">
+            <div class="form-grupo" style="margin-top: 15px;">
+                <label for="selectMateria">Matéria Estudada:*</label>
+                <select id="selectMateria" name="id_materia" required>
+                    <?php if (empty($materias)): ?>
+                        <option value="">Erro ao carregar matérias</option>
+                    <?php else: ?>
+                        <option value="">Selecione a matéria</option>
+                        <?php foreach ($materias as $m): ?>
+                            <option value="<?= $m['id_materia'] ?>"><?= htmlspecialchars($m['nome_materia']) ?></option>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </select>
+            </div>
 
-        <div class="form-grupo" style="margin-top: 10px;">
-            <label for="minutosEstudados">Minutos a Registrar:*</label>
-            <input type="number" id="minutosEstudados" value="25" min="1" required>
-        </div>
+            <div class="form-grupo" style="margin-top: 10px;">
+                <label for="minutosEstudados">Minutos a Registrar:*</label>
+                <input type="number" id="minutosEstudados" name="minutos_estudados" value="25" min="1" required>
+            </div>
 
-        <button class="btn-salvar" onclick="salvarEstudoPomodoro()">Salvar no Histórico</button>
+            <button type="submit" class="btn-salvar">Salvar no Histórico</button>
+        </form>
 
-        <div id="mensagem" style="margin-top: 10px; font-size: 0.9rem; font-weight: bold;"></div>
+        <div id="mensagem" style="margin-top: 10px; font-size: 0.9rem; font-weight: bold; color: <?= $msgCor ?>;"><?= $mensagem ?></div>
 
-        <a href="home.html" class="btn-voltar">← Voltar ao Home</a>
+        <a href="home.php" class="btn-voltar">← Voltar ao Home</a>
     </div>
 
     <script>
-        function obterToken() {
-            let token = localStorage.getItem('token_jwt');
-            if (!token || token === "undefined" || token === "null") {
-                window.location.href = 'login.html';
-                return null;
-            }
-            return token.replace(/^"|"$/g, '');
-        }
-
         let tempoRestante = 25 * 60;
         let timerInterval = null;
         let emFoco = true;
@@ -80,16 +145,15 @@
             document.title = `(${displayTimer.innerText}) Timer - RepoStudium`;
         }
 
-        // Atualiza o tempo atual se o timer não estiver rodando
         function atualizarTempoConfigurado() {
-            if (timerInterval) return; // Se estiver rodando, ignora alterações até resetar
+            if (timerInterval) return;
 
             const focoMin = parseInt(document.getElementById('tempoFoco').value) || 25;
             const descansoMin = parseInt(document.getElementById('tempoPausa').value) || 5;
 
             if (emFoco) {
                 tempoRestante = focoMin * 60;
-                document.getElementById('minutosEstudados').value = focoMin; // Preenche automático
+                document.getElementById('minutosEstudados').value = focoMin;
             } else {
                 tempoRestante = descansoMin * 60;
             }
@@ -99,7 +163,6 @@
         function iniciarTimer() {
             if (timerInterval) return;
 
-            // Bloqueia alterar os inputs de tempo durante a execução
             document.getElementById('tempoFoco').disabled = true;
             document.getElementById('tempoPausa').disabled = true;
 
@@ -153,89 +216,7 @@
             btnPause.style.display = 'none';
         }
 
-        async function carregarMaterias() {
-            const token = obterToken();
-            if (!token) return;
-
-            const select = document.getElementById('selectMateria');
-
-            try {
-                const resposta = await fetch('materiaAPI.php', {
-                    method: 'GET',
-                    headers: { 'Authorization': 'Bearer ' + token }
-                });
-
-                const materias = await resposta.json();
-
-                if (resposta.ok && Array.isArray(materias)) {
-                    select.innerHTML = '<option value="">Selecione a matéria</option>';
-                    materias.forEach(m => {
-                        const opt = document.createElement('option');
-                        opt.value = m.id_materia;
-                        opt.textContent = m.nome_materia;
-                        select.appendChild(opt);
-                    });
-                } else {
-                    select.innerHTML = '<option value="">Erro ao carregar matérias</option>';
-                }
-            } catch (e) {
-                console.error("Erro ao listar matérias:", e);
-                select.innerHTML = '<option value="">Erro de conexão</option>';
-            }
-        }
-
-        async function salvarEstudoPomodoro() {
-            const token = obterToken();
-            if (!token) return;
-
-            const idMateria = document.getElementById('selectMateria').value;
-            const minutos = document.getElementById('minutosEstudados').value;
-            const msgDiv = document.getElementById('mensagem');
-
-            if (!idMateria || !minutos) {
-                msgDiv.style.color = "red";
-                msgDiv.innerText = "Selecione uma matéria e informe os minutos.";
-                return;
-            }
-
-            const hoje = new Date().toISOString().split('T')[0];
-
-            const dados = {
-                id_materia: idMateria,
-                minuto_dedicado: minutos,
-                data_registro_estudo: hoje,
-                observacao: "Sessão concluída via Timer Personalizado"
-            };
-
-            try {
-                const resposta = await fetch('registroDeEstudoAPI.php', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': 'Bearer ' + token,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(dados)
-                });
-
-                const resultado = await resposta.json();
-
-                if (resposta.ok) {
-                    msgDiv.style.color = "green";
-                    msgDiv.innerText = "✅ Sessão salva no histórico!";
-                } else {
-                    msgDiv.style.color = "red";
-                    msgDiv.innerText = "Erro: " + (resultado.erro || "Falha ao salvar");
-                }
-            } catch (e) {
-                console.error("Erro ao salvar registro:", e);
-                msgDiv.style.color = "red";
-                msgDiv.innerText = "Erro de conexão com a API.";
-            }
-        }
-
         window.onload = () => {
-            obterToken();
-            carregarMaterias();
             atualizarTempoConfigurado();
         };
     </script>
